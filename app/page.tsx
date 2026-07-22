@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Sprout, TrendingUp, AlertTriangle, CheckCircle2, LogOut, LayoutDashboard } from "lucide-react";
 
-// HII NI LINK MPYA YA BACKEND YAKO YA CLOUD (RENDER)
 const API_URL = "https://analytiq-backend-1.onrender.com";
 
 export default function Home() {
@@ -15,6 +12,7 @@ export default function Home() {
   const [sectors, setSectors] = useState<any[]>([]);
   const [regFormData, setRegFormData] = useState({ companyName: "", sectorId: "", ceoName: "", email: "" });
   const [registering, setRegistering] = useState(false);
+  const [loadingSectors, setLoadingSectors] = useState(true);
 
   const [template, setTemplate] = useState<any>(null);
   const [dashFormData, setDashFormData] = useState<Record<string, any>>({});
@@ -22,28 +20,38 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
 
-  const chartData = [
-    { name: 'Jumatatu', Mayai: 280, Vifo: 1 },
-    { name: 'Jumanne', Mayai: 310, Vifo: 0 },
-    { name: 'Jumatano', Mayai: 290, Vifo: 2 },
-    { name: 'Alhamisi', Mayai: 330, Vifo: 1 },
-    { name: 'Ijumaa', Mayai: 350, Vifo: 0 },
-  ];
-
+  // HARD RESET: Futa localStorage zote za zamani ili kuanza safi
   useEffect(() => {
-    fetch(`${API_URL}/api/sectors`).then(res => res.json()).then(setSectors);
-    const savedId = localStorage.getItem("analytiq_companyId");
-    const savedName = localStorage.getItem("analytiq_companyName");
-    if (savedId && savedName) {
-      setCompanyId(parseInt(savedId));
-      setCompanyName(savedName);
-      setStep("dashboard");
-    }
+    localStorage.removeItem("analytiq_companyId");
+    localStorage.removeItem("analytiq_companyName");
+    localStorage.removeItem("analytiq_sectorId");
   }, []);
 
+  // Fetch sectors moja kwa moja kutoka backend
+  useEffect(() => {
+    fetch(`${API_URL}/api/sectors`)
+      .then(res => res.json())
+      .then(data => {
+        setSectors(data);
+        setLoadingSectors(false);
+      })
+      .catch(err => {
+        console.error("Error fetching sectors:", err);
+        setLoadingSectors(false);
+      });
+  }, []);
+
+  // Fetch template KWA SECTOR ULIYOAUCHAGUA
   useEffect(() => {
     if (step === "dashboard" && companyId) {
-      fetch(`${API_URL}/api/templates/1`).then(res => res.json()).then(setTemplate);
+      const savedSectorId = localStorage.getItem("analytiq_sectorId") || "1";
+      fetch(`${API_URL}/api/templates/${savedSectorId}`)
+        .then(res => {
+          if (!res.ok) throw new Error("Template not found");
+          return res.json();
+        })
+        .then(data => setTemplate(data))
+        .catch(err => console.error("Error fetching template:", err));
     }
   }, [step, companyId]);
 
@@ -60,6 +68,7 @@ export default function Home() {
         const data = await response.json();
         localStorage.setItem("analytiq_companyId", data.company.id.toString());
         localStorage.setItem("analytiq_companyName", data.company.companyName);
+        localStorage.setItem("analytiq_sectorId", regFormData.sectorId); // HIFADHI SECTOR ID
         setCompanyId(data.company.id);
         setCompanyName(data.company.companyName);
         setStep("dashboard");
@@ -67,7 +76,7 @@ export default function Home() {
         alert("Imeshindikana. Tafadhali tumia email tofauti.");
       }
     } catch (error) {
-      alert("Hitilafu imetokea. Hakikisha Backend inafanya kazi.");
+      alert("Hitilafu imetokea. Hakikisha backend inafanya kazi.");
     } finally {
       setRegistering(false);
     }
@@ -108,58 +117,52 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem("analytiq_companyId");
     localStorage.removeItem("analytiq_companyName");
+    localStorage.removeItem("analytiq_sectorId");
     setStep("register");
     setCompanyId(null);
     setCompanyName("");
+    setTemplate(null);
   };
 
-  // --- VIEW 1: REGISTER (Premium Look) ---
+  // --- VIEW 1: REGISTER ---
   if (step === "register") {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-md w-full">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
-              <Sprout size={32} />
-            </div>
+            <div className="text-5xl mb-4">🌾</div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">ANALYTIQ</h1>
-            <p className="text-slate-500">Fungua akaunti ya kampuni yako na anza kudhibiti faida yako.</p>
+            <p className="text-slate-500">Fungua akaunti ya kampuni yako</p>
           </div>
           
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+            <strong>Sectors zilizopo:</strong> {loadingSectors ? "Inapakia..." : `${sectors.length} sectors`}
+            {sectors.length > 0 && (
+              <ul className="mt-2 text-xs">
+                {sectors.map((s: any) => <li key={s.id}>• {s.sectorName}</li>)}
+              </ul>
+            )}
+          </div>
+
           <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Jina la Kampuni</label>
-              <input required type="text" className="w-full border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" 
-                placeholder="Mfano: Bugota Integrated Farms"
-                value={regFormData.companyName} onChange={e => setRegFormData({...regFormData, companyName: e.target.value})} />
-            </div>
+            <input required type="text" placeholder="Jina la Kampuni" className="w-full border border-slate-200 rounded-lg p-3" 
+              value={regFormData.companyName} onChange={e => setRegFormData({...regFormData, companyName: e.target.value})} />
             
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Sector ya Biashara</label>
-              <select required className="w-full border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition bg-white"
-                value={regFormData.sectorId} onChange={e => setRegFormData({...regFormData, sectorId: e.target.value})}>
-                <option value="">-- Chagua Sector --</option>
-                {sectors.map(s => <option key={s.id} value={s.id}>{s.sectorName}</option>)}
-              </select>
-            </div>
+            <select required className="w-full border border-slate-200 rounded-lg p-3 bg-white"
+              value={regFormData.sectorId} onChange={e => setRegFormData({...regFormData, sectorId: e.target.value})}>
+              <option value="">-- Chagua Sector --</option>
+              {sectors.map(s => <option key={s.id} value={s.id}>{s.sectorName}</option>)}
+            </select>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Jina la CEO</label>
-                <input required type="text" className="w-full border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition" 
-                  placeholder="Jina kamili"
-                  value={regFormData.ceoName} onChange={e => setRegFormData({...regFormData, ceoName: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input required type="email" className="w-full border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition" 
-                  placeholder="mzee@bugota.com"
-                  value={regFormData.email} onChange={e => setRegFormData({...regFormData, email: e.target.value})} />
-              </div>
+              <input required type="text" placeholder="Jina la CEO" className="w-full border border-slate-200 rounded-lg p-3" 
+                value={regFormData.ceoName} onChange={e => setRegFormData({...regFormData, ceoName: e.target.value})} />
+              <input required type="email" placeholder="Email" className="w-full border border-slate-200 rounded-lg p-3" 
+                value={regFormData.email} onChange={e => setRegFormData({...regFormData, email: e.target.value})} />
             </div>
 
             <button type="submit" disabled={registering} 
-              className="w-full bg-blue-600 text-white py-3.5 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20 disabled:bg-blue-300 flex items-center justify-center gap-2">
+              className="w-full bg-blue-600 text-white py-3.5 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-300">
               {registering ? "Inatengeneza..." : "🚀 Anza Sasa"}
             </button>
           </form>
@@ -168,120 +171,94 @@ export default function Home() {
     );
   }
 
-  // --- VIEW 2: DASHBOARD (Premium Look) ---
+  // --- VIEW 2: DASHBOARD ---
   return (
     <main className="min-h-screen bg-slate-50">
-      {/* Top Navigation */}
       <nav className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 text-white p-2 rounded-lg">
-              <Sprout size={20} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">ANALYTIQ</h1>
-              <p className="text-xs text-slate-500">Dashboard ya {companyName}</p>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">🌾 ANALYTIQ</h1>
+            <p className="text-xs text-slate-500">Dashboard ya {companyName}</p>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-slate-600 hover:text-red-600 transition font-medium">
-            <LogOut size={16} /> Ondoka
-          </button>
+          <button onClick={handleLogout} className="text-sm text-red-600 font-medium">Ondoka</button>
         </div>
       </nav>
 
       <div className="max-w-6xl mx-auto p-6 space-y-6">
-        {template && (
+        {!template ? (
+          <div className="text-center py-20 text-slate-500">
+            <p className="text-xl">⏳ Inapakia template ya sector yako...</p>
+            <p className="text-sm mt-2">Ikiwa hii itachukua muda, tafadhali refresh page (Ctrl + F5)</p>
+          </div>
+        ) : (
           <>
-            {/* Top Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-2xl shadow-lg shadow-blue-900/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <TrendingUp className="text-blue-200" size={24} />
-                  <h3 className="font-semibold text-blue-100">Utabiri wa Faida</h3>
-                </div>
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-2xl shadow-lg">
+                <h3 className="font-semibold text-blue-100 mb-2">📈 Utabiri wa Faida</h3>
                 <p className="text-3xl font-bold mb-1">TZS 450,000</p>
-                <p className="text-sm text-blue-200">Muda bora wa kuuza: Baada ya siku 14</p>
+                <p className="text-sm text-blue-200">Muda bora: Baada ya siku 14</p>
               </div>
-
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg"><CheckCircle2 size={20} /></div>
-                  <h3 className="font-semibold text-slate-700">Hali ya Kuku</h3>
-                </div>
+                <h3 className="font-semibold text-slate-700 mb-2">✅ Hali ya Biashara</h3>
                 <p className="text-3xl font-bold text-slate-900 mb-1">NZURI</p>
                 <p className="text-sm text-slate-500">Hakuna tatizo lililorekodiwa leo</p>
               </div>
-
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-amber-100 text-amber-600 p-2 rounded-lg"><LayoutDashboard size={20} /></div>
-                  <h3 className="font-semibold text-slate-700">Jumla ya Mayai</h3>
-                </div>
+                <h3 className="font-semibold text-slate-700 mb-2">📊 Jumla ya Data</h3>
                 <p className="text-3xl font-bold text-slate-900 mb-1">1,560</p>
                 <p className="text-sm text-slate-500">Wiki hii imepita</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Form */}
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
-                <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <Sprout size={20} className="text-blue-600" /> Ingiza Data ya Leo
-                </h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-4">📝 Ingiza Data ya Leo</h2>
                 
                 {alertMessage && (
-                  <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
-                    <AlertTriangle className="text-red-600 shrink-0 mt-0.5" size={20} />
-                    <p className="text-sm font-medium text-red-700">{alertMessage}</p>
+                  <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-700 font-medium">
+                    {alertMessage}
                   </div>
                 )}
                 
                 {message && (
-                  <div className={`mb-4 p-3 rounded-xl text-sm font-medium flex items-center gap-2 ${message.includes("✅") ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
-                    <CheckCircle2 size={16} /> {message}
+                  <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${message.includes("✅") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                    {message}
                   </div>
                 )}
 
                 <div className="space-y-4">
-                  {Object.entries(template.defaultMetrics).map(([key, value]: [string, any]) => (
+                  {template && template.defaultMetrics && Object.entries(template.defaultMetrics).map(([key, value]: [string, any]) => (
                     <div key={key}>
                       <label className="block text-sm font-medium text-slate-700 mb-1.5">{value.label}</label>
-                      <input 
-                        type={value.type} 
-                        value={dashFormData[key] || ""} 
-                        onChange={(e) => handleDashInputChange(key, e.target.value)} 
-                        className="w-full border border-slate-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" 
-                        placeholder={`0 ${value.unit}`}
-                      />
+                      <input type={value.type} value={dashFormData[key] || ""} onChange={(e) => handleDashInputChange(key, e.target.value)} 
+                        className="w-full border border-slate-200 rounded-lg p-3" placeholder={`0 ${value.unit}`} />
                     </div>
                   ))}
-                  <button 
-                    onClick={handleSave} 
-                    disabled={saving} 
-                    className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-semibold hover:bg-slate-800 transition shadow-lg shadow-slate-900/10 disabled:bg-slate-300 mt-2"
-                  >
+                  <button onClick={handleSave} disabled={saving} 
+                    className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-semibold hover:bg-slate-800 disabled:bg-slate-300 mt-2">
                     {saving ? "Inahifadhi..." : "💾 Hifadhi Data"}
                   </button>
                 </div>
               </div>
 
-              {/* Right Column: Charts */}
               <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900 mb-6">📈 Mwenendo wa Uzalishaji (Siku 5 Zilizopita)</h3>
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                      <Tooltip 
-                        cursor={{ fill: '#f1f5f9' }}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Bar dataKey="Mayai" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
-                      <Bar dataKey="Vifo" fill="#ef4444" radius={[6, 6, 0, 0]} barSize={32} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <h3 className="text-lg font-bold text-slate-900 mb-6">📊 Mwenendo wa Uzalishaji</h3>
+                <div className="space-y-4">
+                  {['Jumatatu', 'Jumanne', 'Jumatano', 'Alhamisi', 'Ijumaa'].map((day, index) => (
+                    <div key={day} className="flex items-center gap-4">
+                      <span className="w-20 text-sm font-medium text-slate-600">{day}</span>
+                      <div className="flex-1 bg-slate-100 rounded-full h-8 relative overflow-hidden">
+                        <div className="absolute left-0 top-0 h-full bg-blue-500 rounded-full flex items-center justify-end pr-2 text-white text-xs font-bold" style={{ width: `${60 + (index * 5)}%` }}>
+                          Target
+                        </div>
+                      </div>
+                      <div className="flex-1 bg-slate-100 rounded-full h-8 relative overflow-hidden">
+                        <div className="absolute left-0 top-0 h-full bg-emerald-400 rounded-full flex items-center justify-end pr-2 text-white text-xs font-bold" style={{ width: `${40 + (index * 8)}%` }}>
+                          Actual
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
