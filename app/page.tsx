@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Sprout, TrendingUp, AlertTriangle, CheckCircle2, LogOut, LayoutDashboard } from "lucide-react";
+
+// HII NI LINK MPYA YA BACKEND YAKO YA CLOUD (RENDER)
+const API_URL = "https://analytiq-backend-1.onrender.com";
 
 export default function Home() {
   const [step, setStep] = useState<"register" | "dashboard">("register");
@@ -28,7 +31,7 @@ export default function Home() {
   ];
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/sectors").then(res => res.json()).then(setSectors);
+    fetch(`${API_URL}/api/sectors`).then(res => res.json()).then(setSectors);
     const savedId = localStorage.getItem("analytiq_companyId");
     const savedName = localStorage.getItem("analytiq_companyName");
     if (savedId && savedName) {
@@ -40,7 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     if (step === "dashboard" && companyId) {
-      fetch("http://localhost:4000/api/templates/1").then(res => res.json()).then(setTemplate);
+      fetch(`${API_URL}/api/templates/1`).then(res => res.json()).then(setTemplate);
     }
   }, [step, companyId]);
 
@@ -48,7 +51,7 @@ export default function Home() {
     e.preventDefault();
     setRegistering(true);
     try {
-      const response = await fetch("http://localhost:4000/api/companies", {
+      const response = await fetch(`${API_URL}/api/companies`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(regFormData),
@@ -73,7 +76,7 @@ export default function Home() {
   const handleDashInputChange = (key: string, value: any) => {
     setDashFormData((prev) => ({ ...prev, [key]: value }));
     if (key === "mortality" && Number(value) > 2) {
-      setAlertMessage("Vifo vimezidi 2 leo! Tafadhali kagua afya ya kuku mara moja.");
+      setAlertMessage("🚨 ALERT: Vifo vimezidi 2 leo! Tafadhali kagua afya ya kuku mara moja.");
     } else {
       setAlertMessage("");
     }
@@ -83,20 +86,20 @@ export default function Home() {
     setSaving(true);
     setMessage("");
     try {
-      const response = await fetch("http://localhost:4000/api/records", {
+      const response = await fetch(`${API_URL}/api/records`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ companyId, recordDate: new Date().toISOString().split("T")[0], metricsData: dashFormData }),
       });
       if (response.ok) {
-        setMessage("Data imehifadhiwa kwa mafanikio!");
+        setMessage("✅ Data imehifadhiwa kwenye database kwa mafanikio!");
         setDashFormData({});
         setAlertMessage("");
       } else {
-        setMessage("Imeshindikana kuhifadhi data.");
+        setMessage("❌ Imeshindikana kuhifadhi data.");
       }
     } catch (error) {
-      setMessage("Hitilafu imetokea.");
+      setMessage("❌ Hitilafu imetokea.");
     } finally {
       setSaving(false);
     }
@@ -157,7 +160,7 @@ export default function Home() {
 
             <button type="submit" disabled={registering} 
               className="w-full bg-blue-600 text-white py-3.5 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20 disabled:bg-blue-300 flex items-center justify-center gap-2">
-              {registering ? "Inatengeneza..." : "Anza Sasa"}
+              {registering ? "Inatengeneza..." : "🚀 Anza Sasa"}
             </button>
           </form>
         </div>
@@ -234,7 +237,7 @@ export default function Home() {
                 )}
                 
                 {message && (
-                  <div className={`mb-4 p-3 rounded-xl text-sm font-medium flex items-center gap-2 ${message.includes("Data imehifadhiwa") ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+                  <div className={`mb-4 p-3 rounded-xl text-sm font-medium flex items-center gap-2 ${message.includes("✅") ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
                     <CheckCircle2 size={16} /> {message}
                   </div>
                 )}
