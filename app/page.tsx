@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import * as Solver from "javascript-lp-solver";
+import Solver from "javascript-lp-solver";
 import { 
   LayoutDashboard, TrendingUp, Users, DollarSign, 
   Package, Briefcase, FileText, BrainCircuit, 
@@ -24,7 +24,6 @@ const chartData = [
 ];
 
 const sidebarItems = [
-  // Phase 1: Dashboard & Operations
   { id: "Dashboard", icon: LayoutDashboard, label: "Dashboard", section: "Operations" },
   { id: "Sales", icon: TrendingUp, label: "Sales", section: "Operations" },
   { id: "Finance", icon: DollarSign, label: "Finance", section: "Operations" },
@@ -32,8 +31,6 @@ const sidebarItems = [
   { id: "HR", icon: Briefcase, label: "HR", section: "Operations" },
   { id: "Inventory", icon: Package, label: "Inventory", section: "Operations" },
   { id: "Reports", icon: FileText, label: "Reports", section: "Operations" },
-  
-  // Phase 2: Decision Intelligence
   { id: "Decision Center", icon: Target, label: "Decision Center", section: "Decision Intelligence", highlight: true },
   { id: "Forecast Center", icon: TrendingUp, label: "Forecast Center", section: "Decision Intelligence" },
   { id: "Scenario Studio", icon: Sliders, label: "Scenario Studio", section: "Decision Intelligence" },
@@ -42,8 +39,6 @@ const sidebarItems = [
   { id: "Benchmarking", icon: BarChart3, label: "Benchmarking", section: "Decision Intelligence" },
   { id: "Recommendations", icon: Lightbulb, label: "Recommendations", section: "Decision Intelligence" },
   { id: "AI Assistant", icon: BrainCircuit, label: "AI Assistant", section: "Decision Intelligence" },
-  
-  // Phase 3: Operations Research
   { id: "Optimization Lab", icon: Calculator, label: "Optimization Lab", section: "Operations Research", highlight: true },
   { id: "Simulation Lab", icon: Dice5, label: "Simulation Lab", section: "Operations Research" },
   { id: "Decision Trees", icon: GitBranch, label: "Decision Trees", section: "Operations Research" },
@@ -66,7 +61,6 @@ export default function AnalytiqDashboard() {
   const [selectedKPI, setSelectedKPI] = useState<any>(null);
   const [marketingSpend, setMarketingSpend] = useState(20);
   
-  // Linear Programming State
   const [objectiveType, setObjectiveType] = useState("maximize");
   const [variables, setVariables] = useState([
     { name: "x1", coefficient: 5 },
@@ -91,12 +85,6 @@ export default function AnalytiqDashboard() {
     const newVar = { name: `x${variables.length + 1}`, coefficient: 0 };
     setVariables([...variables, newVar]);
     setConstraints(constraints.map(c => ({ ...c, coefficients: [...c.coefficients, 0] })));
-  };
-
-  const removeVariable = (index: number) => {
-    if (variables.length <= 2) return;
-    setVariables(variables.filter((_, i) => i !== index));
-    setConstraints(constraints.map(c => ({ ...c, coefficients: c.coefficients.filter((_, i) => i !== index) })));
   };
 
   const addConstraint = () => {
@@ -484,7 +472,6 @@ export default function AnalytiqDashboard() {
     }
   };
 
-  // Group sidebar items by section
   const groupedItems = sidebarItems.reduce((acc, item) => {
     if (!acc[item.section]) acc[item.section] = [];
     acc[item.section].push(item);
@@ -561,7 +548,6 @@ export default function AnalytiqDashboard() {
         <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
       </main>
 
-      {/* KPI Detail Modal */}
       {selectedKPI && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
