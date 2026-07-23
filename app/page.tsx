@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const API_URL = "https://analytiq-backend-1.onrender.com";
+// HII NI LINK MPYA YA RAILWAY (IMEWEKWA TAYARI)
+const API_URL = "https://analytiq-backend-production.up.railway.app";
 
 export default function Home() {
   const [step, setStep] = useState<"register" | "dashboard">("register");
@@ -47,7 +48,7 @@ export default function Home() {
         alert(data.error || "Imeshindikana.");
       }
     } catch {
-      alert("Hakikisha backend inafanya kazi. Subiri sekunde 30 kisha jaribu tena.");
+      alert("Hakikisha backend inafanya kazi.");
     } finally {
       setRegistering(false);
     }
@@ -138,7 +139,6 @@ export default function Home() {
       </nav>
 
       <div className="max-w-6xl mx-auto p-6 space-y-8">
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
             <p className="text-xs font-bold text-slate-500 uppercase mb-2">💰 Mapato</p>
@@ -158,7 +158,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Input Form */}
         <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span> Ingiza Data ya Leo</h2>
           
