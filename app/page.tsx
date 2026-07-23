@@ -11,7 +11,7 @@ import {
   ChevronRight, Calculator, GitBranch, Dice5,
   Truck, Calendar, RotateCcw, Play, Download
 } from "lucide-react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const chartData = [
   { name: 'Jan', revenue: 4000, profit: 2400 },
@@ -22,7 +22,6 @@ const chartData = [
   { name: 'Jun', revenue: 6390, profit: 5400 },
 ];
 
-// SIMPLIFIED SIDEBAR: 8 modules tu
 const sidebarItems = [
   { id: "Overview", icon: LayoutDashboard, label: "Overview" },
   { id: "Decisions", icon: Target, label: "Decisions" },
@@ -45,7 +44,6 @@ export default function AnalytiqDashboard() {
   const [activeModule, setActiveModule] = useState("Overview");
   const [activeSubTab, setActiveSubTab] = useState("Dashboard");
   const [selectedKPI, setSelectedKPI] = useState<any>(null);
-  const [marketingSpend, setMarketingSpend] = useState(20);
   
   const [objectiveType, setObjectiveType] = useState("maximize");
   const [variables, setVariables] = useState([
@@ -59,12 +57,32 @@ export default function AnalytiqDashboard() {
   const [solution, setSolution] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
 
-  const openKPIDetail = (kpi: any) => {
+  const handleModuleClick = (moduleId: string) => {
+    console.log("Module clicked:", moduleId);
+    setActiveModule(moduleId);
+    const tabs = getSubTabs(moduleId);
+    if (tabs.length > 0) {
+      setActiveSubTab(tabs[0]);
+    }
+  };
+
+  const handleKPIClick = (kpi: any) => {
+    console.log("KPI clicked:", kpi.title);
     setSelectedKPI(kpi);
   };
 
-  const closeKPIDetail = () => {
-    setSelectedKPI(null);
+  const getSubTabs = (module: string): string[] => {
+    const tabs: Record<string, string[]> = {
+      "Overview": ["Dashboard", "Health Score", "AI Insights"],
+      "Decisions": ["Decision Center", "Recommendations", "Root Cause"],
+      "Analytics": ["Forecast", "Benchmarking", "Sensitivity"],
+      "Models": ["Optimization", "Simulation", "Monte Carlo", "Decision Trees"],
+      "Operations": ["Routing", "Scheduling", "Resource Allocation"],
+      "AI Assistant": ["Chat"],
+      "Reports": ["Generate", "History"],
+      "Settings": ["Company", "Users", "Permissions"],
+    };
+    return tabs[module] || [];
   };
 
   const addVariable = () => {
@@ -122,7 +140,7 @@ export default function AnalytiqDashboard() {
       setSolution(result);
       setShowResults(true);
     } catch (error) {
-      alert("Error solving LP problem. Check your constraints.");
+      alert("Error solving LP problem.");
     }
   };
 
@@ -131,271 +149,251 @@ export default function AnalytiqDashboard() {
     setShowResults(false);
   };
 
-  // Sub-tabs for each module
-  const getSubTabs = (module: string) => {
-    switch (module) {
-      case "Overview":
-        return ["Dashboard", "Health Score", "AI Insights"];
-      case "Decisions":
-        return ["Decision Center", "Recommendations", "Root Cause"];
-      case "Analytics":
-        return ["Forecast", "Benchmarking", "Sensitivity"];
-      case "Models":
-        return ["Optimization", "Simulation", "Monte Carlo", "Decision Trees"];
-      case "Operations":
-        return ["Routing", "Scheduling", "Resource Allocation"];
-      case "AI Assistant":
-        return ["Chat"];
-      case "Reports":
-        return ["Generate", "History"];
-      case "Settings":
-        return ["Company", "Users", "Permissions"];
-      default:
-        return [];
-    }
-  };
-
   const renderContent = () => {
-    // OVERVIEW MODULE
-    if (activeModule === "Overview") {
-      if (activeSubTab === "Dashboard") {
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {kpiCards.map((kpi, index) => (
-                <div 
-                  key={index} 
-                  onClick={() => openKPIDetail(kpi)}
-                  className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={`p-2 rounded-lg ${kpi.bg}`}><TrendingUp className={`w-5 h-5 ${kpi.color}`} /></div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${kpi.status === "Healthy" || kpi.status === "Excellent" || kpi.status === "Strong" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{kpi.status}</span>
+    if (activeModule === "Overview" && activeSubTab === "Dashboard") {
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {kpiCards.map((kpi, index) => (
+              <div 
+                key={index} 
+                onClick={() => handleKPIClick(kpi)}
+                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`p-2 rounded-lg ${kpi.bg}`}>
+                    <TrendingUp className={`w-5 h-5 ${kpi.color}`} />
                   </div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">{kpi.title}</p>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition">{kpi.value}</h3>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className={`flex items-center font-semibold ${kpi.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {kpi.trend === 'up' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}{kpi.change}
-                    </span>
-                    <span className="text-slate-400">vs last period</span>
-                  </div>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                    kpi.status === "Healthy" || kpi.status === "Excellent" || kpi.status === "Strong" 
+                      ? "bg-emerald-50 text-emerald-700" 
+                      : "bg-amber-50 text-amber-700"
+                  }`}>
+                    {kpi.status}
+                  </span>
                 </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <h3 className="text-base font-bold text-slate-900 mb-6">Revenue vs Profit Trend</h3>
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                      <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
-                      <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="none" />
-                      <defs><linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0f172a" stopOpacity={0.1}/><stop offset="95%" stopColor="#0f172a" stopOpacity={0}/></linearGradient></defs>
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <p className="text-sm font-medium text-slate-500 mb-1">{kpi.title}</p>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition">
+                  {kpi.value}
+                </h3>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={`flex items-center font-semibold ${kpi.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {kpi.trend === 'up' ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+                    {kpi.change}
+                  </span>
+                  <span className="text-slate-400">vs last period</span>
                 </div>
               </div>
-              <div className="bg-slate-900 p-6 rounded-2xl shadow-lg text-white flex flex-col">
-                <div className="flex items-center gap-2 mb-4"><BrainCircuit className="w-5 h-5 text-indigo-400" /><h3 className="text-base font-bold">AI Decision Insight</h3></div>
-                <div className="flex-1 space-y-4">
-                  <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                    <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">Root Cause Analysis</p>
-                    <p className="text-sm text-slate-300 leading-relaxed">Profit margin increased by 2.1% despite a 3.2% drop in active customers.</p>
-                  </div>
-                  <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                    <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-2">AI Recommendation</p>
-                    <p className="text-sm text-slate-300 leading-relaxed">Reallocate 15% of marketing budget to retention campaign for top 20% customers.</p>
-                  </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-base font-bold text-slate-900 mb-6">Revenue vs Profit Trend</h3>
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                    <Area type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
+                    <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="none" />
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0f172a" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="bg-slate-900 p-6 rounded-2xl shadow-lg text-white">
+              <div className="flex items-center gap-2 mb-4">
+                <BrainCircuit className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-bold">AI Decision Insight</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                  <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">Root Cause</p>
+                  <p className="text-sm text-slate-300">Profit margin increased despite customer drop.</p>
+                </div>
+                <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                  <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-2">Recommendation</p>
+                  <p className="text-sm text-slate-300">Reallocate 15% budget to retention campaign.</p>
                 </div>
               </div>
             </div>
           </div>
-        );
-      }
-      return <div className="text-center py-20 text-slate-400">{activeSubTab} coming soon...</div>;
+        </div>
+      );
     }
 
-    // MODELS MODULE (Optimization Lab)
-    if (activeModule === "Models") {
-      if (activeSubTab === "Optimization") {
-        return (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8 rounded-2xl shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
-                    <Calculator className="w-7 h-7 text-emerald-400" />
-                    Optimization Lab
-                  </h2>
-                  <p className="text-slate-300">Linear Programming Solver • Operations Research Engine</p>
+    if (activeModule === "Models" && activeSubTab === "Optimization") {
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8 rounded-2xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                  <Calculator className="w-7 h-7 text-emerald-400" />
+                  Optimization Lab
+                </h2>
+                <p className="text-slate-300">Linear Programming Solver</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={resetLP} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold rounded-lg flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4" /> Reset
+                </button>
+                <button onClick={solveLP} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg flex items-center gap-2">
+                  <Play className="w-4 h-4" /> Solve
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-base font-bold text-slate-900 mb-4">Objective Function</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <select 
+                    value={objectiveType} 
+                    onChange={(e) => setObjectiveType(e.target.value)}
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold"
+                  >
+                    <option value="maximize">Maximize</option>
+                    <option value="minimize">Minimize</option>
+                  </select>
+                  <span className="text-sm text-slate-500">Z =</span>
+                  <div className="flex-1 flex items-center gap-2 flex-wrap">
+                    {variables.map((v, i) => (
+                      <div key={i} className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={v.coefficient}
+                          onChange={(e) => {
+                            const newVars = [...variables];
+                            newVars[i].coefficient = parseFloat(e.target.value) || 0;
+                            setVariables(newVars);
+                          }}
+                          className="w-20 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono"
+                        />
+                        <span className="text-sm font-mono text-slate-700">{v.name}</span>
+                        {i < variables.length - 1 && <span className="text-slate-400">+</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={resetLP} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold rounded-lg transition flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4" /> Reset
-                  </button>
-                  <button onClick={solveLP} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg transition flex items-center gap-2 shadow-lg shadow-emerald-600/20">
-                    <Play className="w-4 h-4" /> Solve
-                  </button>
+                <button onClick={addVariable} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                  + Add Variable
+                </button>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-base font-bold text-slate-900 mb-4">Constraints</h3>
+                <div className="space-y-3">
+                  {constraints.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex items-center gap-2 flex-1">
+                        {c.coefficients.map((coeff, i) => (
+                          <div key={i} className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={coeff}
+                              onChange={(e) => {
+                                const newConstraints = constraints.map(con => 
+                                  con.id === c.id 
+                                    ? { ...con, coefficients: con.coefficients.map((c, idx) => idx === i ? parseFloat(e.target.value) || 0 : c) }
+                                    : con
+                                );
+                                setConstraints(newConstraints);
+                              }}
+                              className="w-16 px-2 py-1.5 bg-white border border-slate-200 rounded text-sm font-mono"
+                            />
+                            <span className="text-xs font-mono text-slate-600">{variables[i]?.name}</span>
+                            {i < c.coefficients.length - 1 && <span className="text-slate-400">+</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <select
+                        value={c.type}
+                        onChange={(e) => {
+                          const newConstraints = constraints.map(con => 
+                            con.id === c.id ? { ...con, type: e.target.value } : con
+                          );
+                          setConstraints(newConstraints);
+                        }}
+                        className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm font-semibold"
+                      >
+                        <option value="<=">≤</option>
+                        <option value=">=">≥</option>
+                        <option value="=">=</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={c.rhs}
+                        onChange={(e) => {
+                          const newConstraints = constraints.map(con => 
+                            con.id === c.id ? { ...con, rhs: parseFloat(e.target.value) || 0 } : con
+                          );
+                          setConstraints(newConstraints);
+                        }}
+                        className="w-20 px-3 py-1.5 bg-white border border-slate-200 rounded text-sm font-mono"
+                      />
+                      <button onClick={() => removeConstraint(c.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
+                <button onClick={addConstraint} className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                  + Add Constraint
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-indigo-600" />
-                    Objective Function
-                  </h3>
-                  <div className="flex items-center gap-4 mb-4">
-                    <select 
-                      value={objectiveType} 
-                      onChange={(e) => setObjectiveType(e.target.value)}
-                      className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold"
-                    >
-                      <option value="maximize">Maximize</option>
-                      <option value="minimize">Minimize</option>
-                    </select>
-                    <span className="text-sm text-slate-500">Z =</span>
-                    <div className="flex-1 flex items-center gap-2 flex-wrap">
+            <div className="space-y-6">
+              {showResults && solution ? (
+                <div className="bg-emerald-50 p-6 rounded-2xl border-2 border-emerald-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                    <h3 className="text-base font-bold text-emerald-900">Optimal Solution</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-white rounded-xl border border-emerald-200">
+                      <p className="text-xs font-semibold text-emerald-700 uppercase mb-1">Objective Value</p>
+                      <p className="text-3xl font-bold text-emerald-900 font-mono">{solution.result?.toFixed(2)}</p>
+                    </div>
+                    <div className="space-y-2">
                       {variables.map((v, i) => (
-                        <div key={i} className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            value={v.coefficient}
-                            onChange={(e) => {
-                              const newVars = [...variables];
-                              newVars[i].coefficient = parseFloat(e.target.value) || 0;
-                              setVariables(newVars);
-                            }}
-                            className="w-20 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono"
-                          />
-                          <span className="text-sm font-mono text-slate-700">{v.name}</span>
-                          {i < variables.length - 1 && <span className="text-slate-400">+</span>}
+                        <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200">
+                          <span className="text-sm font-semibold text-slate-700">{v.name}</span>
+                          <span className="text-lg font-bold text-emerald-700 font-mono">{solution[v.name]?.toFixed(2) || 0}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <button onClick={addVariable} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-                    + Add Variable
-                  </button>
                 </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-amber-600" />
-                    Constraints
-                  </h3>
-                  <div className="space-y-3">
-                    {constraints.map((c) => (
-                      <div key={c.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex items-center gap-2 flex-1">
-                          {c.coefficients.map((coeff, i) => (
-                            <div key={i} className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                value={coeff}
-                                onChange={(e) => {
-                                  const newConstraints = constraints.map(con => 
-                                    con.id === c.id 
-                                      ? { ...con, coefficients: con.coefficients.map((c, idx) => idx === i ? parseFloat(e.target.value) || 0 : c) }
-                                      : con
-                                  );
-                                  setConstraints(newConstraints);
-                                }}
-                                className="w-16 px-2 py-1.5 bg-white border border-slate-200 rounded text-sm font-mono"
-                              />
-                              <span className="text-xs font-mono text-slate-600">{variables[i]?.name}</span>
-                              {i < c.coefficients.length - 1 && <span className="text-slate-400">+</span>}
-                            </div>
-                          ))}
-                        </div>
-                        <select
-                          value={c.type}
-                          onChange={(e) => {
-                            const newConstraints = constraints.map(con => 
-                              con.id === c.id ? { ...con, type: e.target.value } : con
-                            );
-                            setConstraints(newConstraints);
-                          }}
-                          className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm font-semibold"
-                        >
-                          <option value="<=">≤</option>
-                          <option value=">=">≥</option>
-                          <option value="=">=</option>
-                        </select>
-                        <input
-                          type="number"
-                          value={c.rhs}
-                          onChange={(e) => {
-                            const newConstraints = constraints.map(con => 
-                              con.id === c.id ? { ...con, rhs: parseFloat(e.target.value) || 0 } : con
-                            );
-                            setConstraints(newConstraints);
-                          }}
-                          className="w-20 px-3 py-1.5 bg-white border border-slate-200 rounded text-sm font-mono"
-                        />
-                        <button onClick={() => removeConstraint(c.id)} className="p-1 text-red-500 hover:bg-red-50 rounded">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={addConstraint} className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-                    + Add Constraint
-                  </button>
+              ) : (
+                <div className="bg-slate-50 p-12 rounded-2xl border-2 border-dashed border-slate-300 text-center">
+                  <Calculator className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                  <p className="text-sm font-semibold text-slate-600 mb-2">No Solution Yet</p>
+                  <p className="text-xs text-slate-500">Click Solve to find optimal solution</p>
                 </div>
-              </div>
-
-              <div className="space-y-6">
-                {showResults && solution ? (
-                  <div className="bg-emerald-50 p-6 rounded-2xl border-2 border-emerald-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                      <h3 className="text-base font-bold text-emerald-900">Optimal Solution</h3>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="p-4 bg-white rounded-xl border border-emerald-200">
-                        <p className="text-xs font-semibold text-emerald-700 uppercase mb-1">Objective Value</p>
-                        <p className="text-3xl font-bold text-emerald-900 font-mono">{solution.result?.toFixed(2)}</p>
-                      </div>
-                      <div className="space-y-2">
-                        {variables.map((v, i) => (
-                          <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-200">
-                            <span className="text-sm font-semibold text-slate-700">{v.name}</span>
-                            <span className="text-lg font-bold text-emerald-700 font-mono">{solution[v.name]?.toFixed(2) || 0}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-slate-50 p-12 rounded-2xl border-2 border-dashed border-slate-300 text-center">
-                    <Calculator className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                    <p className="text-sm font-semibold text-slate-600 mb-2">No Solution Yet</p>
-                    <p className="text-xs text-slate-500">Define objective and constraints, then click Solve</p>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
-        );
-      }
-      return <div className="text-center py-20 text-slate-400">{activeSubTab} coming soon...</div>;
+        </div>
+      );
     }
 
-    // DEFAULT: Coming soon
     return (
       <div className="flex flex-col items-center justify-center h-96 text-slate-400">
         <Settings className="w-16 h-16 mb-4 opacity-20" />
         <h3 className="text-lg font-semibold text-slate-600">{activeModule} - {activeSubTab}</h3>
-        <p className="text-sm">Coming in next update...</p>
+        <p className="text-sm">Coming soon...</p>
       </div>
     );
   };
@@ -413,10 +411,7 @@ export default function AnalytiqDashboard() {
           {sidebarItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => {
-                setActiveModule(item.id);
-                setActiveSubTab(getSubTabs(item.id)[0]);
-              }}
+              onClick={() => handleModuleClick(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 activeModule === item.id
                   ? "bg-slate-900 text-white shadow-md"
@@ -429,7 +424,7 @@ export default function AnalytiqDashboard() {
           ))}
         </nav>
         <div className="p-4 border-t border-slate-200">
-          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition">
+          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
             <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">ZM</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 truncate">Zacharia M.</p>
@@ -460,15 +455,15 @@ export default function AnalytiqDashboard() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-          </div>
+          <button className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+          </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
+        <div className="flex-1 overflow-y-auto p-8">
+          {renderContent()}
+        </div>
       </main>
 
       {selectedKPI && (
@@ -479,9 +474,11 @@ export default function AnalytiqDashboard() {
                 <h3 className="text-xl font-bold text-slate-900">{selectedKPI.title}</h3>
                 <p className="text-sm text-slate-500">Executive Decision Panel</p>
               </div>
-              <button onClick={closeKPIDetail} className="p-2 hover:bg-slate-100 rounded-lg transition"><X className="w-5 h-5 text-slate-500" /></button>
+              <button onClick={() => setSelectedKPI(null)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Current</p>
@@ -497,7 +494,9 @@ export default function AnalytiqDashboard() {
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Variance</p>
-                  <p className={`text-xl font-bold ${selectedKPI.variance.startsWith('-') ? 'text-red-600' : 'text-emerald-600'}`}>{selectedKPI.variance}</p>
+                  <p className={`text-xl font-bold ${selectedKPI.variance.startsWith('-') ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {selectedKPI.variance}
+                  </p>
                 </div>
               </div>
             </div>
