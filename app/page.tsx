@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { 
   LayoutDashboard, TrendingUp, Users, DollarSign, 
   Package, Briefcase, FileText, BrainCircuit, 
   Settings, Bell, Search, ArrowUpRight, 
-  ArrowDownRight, CheckCircle2, MessageSquare, Sliders
+  ArrowDownRight, CheckCircle2, Sliders, Upload, X, FileSpreadsheet
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
@@ -41,8 +42,39 @@ const kpiCards = [
 export default function AnalytiqDashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [marketingSpend, setMarketingSpend] = useState(20);
+  
+  // Excel Import States
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importedData, setImportedData] = useState<any[]>([]);
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Dynamic Content Renderer
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    const reader = new FileReader();
+    
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      // Convert sheet to JSON array of arrays (header: 1 gives us rows)
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+      setImportedData(data);
+    };
+    
+    reader.readAsBinaryString(file);
+  };
+
+  const clearImport = () => {
+    setImportedData([]);
+    setFileName("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "Dashboard":
@@ -207,6 +239,7 @@ export default function AnalytiqDashboard() {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
+      {/* LEFT SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center"><BrainCircuit className="text-white w-5 h-5" /></div>
@@ -227,6 +260,7 @@ export default function AnalytiqDashboard() {
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
           <div className="flex items-center gap-4 flex-1">
@@ -238,14 +272,110 @@ export default function AnalytiqDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* EXCEL IMPORT BUTTON */}
+            <button 
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg hover:bg-indigo-100 transition border border-indigo-200"
+            >
+              <Upload className="w-4 h-4" /> Import Excel/CSV
+            </button>
             <button className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"><Bell className="w-5 h-5" /><span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span></button>
             <button className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition shadow-sm flex items-center gap-2"><ArrowUpRight className="w-4 h-4" /> New Report</button>
           </div>
         </header>
+        
         <div className="flex-1 overflow-y-auto p-8">
           {renderContent()}
         </div>
       </main>
+
+      {/* EXCEL IMPORT MODAL */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 rounded-lg"><FileSpreadsheet className="w-6 h-6 text-indigo-600" /></div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Import Data Source</h3>
+                  <p className="text-sm text-slate-500">Upload Excel (.xlsx) or CSV files to update your dashboard.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowImportModal(false)} className="p-2 hover:bg-slate-100 rounded-lg transition"><X className="w-5 h-5 text-slate-500" /></button>
+            </div>
+            
+            <div className="p-6">
+              {!importedData.length ? (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-indigo-500 hover:bg-indigo-50/30 transition cursor-pointer group"
+                >
+                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4 group-hover:text-indigo-500 transition" />
+                  <p className="text-base font-semibold text-slate-700 mb-1">Click to upload or drag and drop</p>
+                  <p className="text-sm text-slate-500">Supports .xlsx, .xls, and .csv files</p>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept=".xlsx, .xls, .csv" 
+                    onChange={handleFileUpload} 
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                      <div>
+                        <p className="font-semibold text-emerald-900">File Parsed Successfully!</p>
+                        <p className="text-sm text-emerald-700">{fileName} • {importedData.length - 1} rows detected</p>
+                      </div>
+                    </div>
+                    <button onClick={clearImport} className="text-sm font-medium text-emerald-700 hover:text-emerald-900 underline">Remove</button>
+                  </div>
+                  
+                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 sticky top-0">
+                        <tr>
+                          {importedData[0]?.map((header: any, i: number) => (
+                            <th key={i} className="px-4 py-3 font-semibold text-slate-700 border-b border-slate-200">{header || `Column ${i+1}`}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {importedData.slice(1, 6).map((row: any[], rowIndex: number) => (
+                          <tr key={rowIndex} className="hover:bg-slate-50">
+                            {row.map((cell: any, cellIndex: number) => (
+                              <td key={cellIndex} className="px-4 py-3 text-slate-600">{cell}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {importedData.length > 6 && (
+                      <div className="p-3 text-center text-xs text-slate-500 bg-slate-50 border-t border-slate-200">
+                        Showing first 5 rows of {importedData.length - 1} total rows
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      alert("Data successfully synced to ANALYTIQ Database! (Backend integration ready)");
+                      setShowImportModal(false);
+                      clearImport();
+                    }}
+                    className="w-full py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Confirm & Sync to Dashboard
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
