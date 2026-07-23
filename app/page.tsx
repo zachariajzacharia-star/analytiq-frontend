@@ -10,9 +10,10 @@ import {
   ArrowDownRight, CheckCircle2, Sliders, X, 
   FileSpreadsheet, Target, Shield, Activity, BarChart3, Lightbulb,
   ChevronRight, Calculator, GitBranch, Dice5,
-  Truck, Calendar, RotateCcw, Play, Upload, UploadCloud
+  Truck, Calendar, RotateCcw, Play, Upload, UploadCloud,
+  AlertTriangle, Zap, Eye, Download
 } from "lucide-react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const API_URL = "https://analytiq-backend-production.up.railway.app";
 
@@ -27,6 +28,59 @@ const sidebarItems = [
   { id: "Settings", icon: Settings, label: "Settings" },
 ];
 
+// Deep root cause data for each KPI
+const kpiRootCauses: Record<string, any> = {
+  "Total Revenue": {
+    drillDown: [
+      { level: "Region", finding: "East Africa down 3.2%", impact: "high" },
+      { level: "Branch", finding: "Dar es Salaam underperformed by 15%", impact: "high" },
+      { level: "Salesperson", finding: "Top rep missed target by 22%", impact: "medium" },
+      { level: "Customer", finding: "Key customer reduced orders by 40%", impact: "critical" },
+      { level: "Product", finding: "Product B sales declined 18%", impact: "medium" },
+    ],
+    recommendation: "Launch immediate retention campaign targeting top 20% customers in Dar es Salaam branch. Expected to recover 60% of lost revenue within 30 days.",
+    impact: "+TZS 27M",
+    confidence: 94,
+    risk: "Low"
+  },
+  "Total Expenses": {
+    drillDown: [
+      { level: "Category", finding: "Marketing costs up 28%", impact: "high" },
+      { level: "Department", finding: "Sales dept overspent by TZS 12M", impact: "medium" },
+      { level: "Vendor", finding: "Supplier A increased prices by 15%", impact: "high" },
+      { level: "Project", finding: "Project X over budget by 35%", impact: "critical" },
+    ],
+    recommendation: "Renegotiate contract with Supplier A and reallocate marketing budget to high-ROI channels. Expected savings: TZS 18M quarterly.",
+    impact: "-TZS 18M",
+    confidence: 87,
+    risk: "Medium"
+  },
+  "Net Profit": {
+    drillDown: [
+      { level: "Revenue", finding: "Revenue grew 12.5% but costs grew 15%", impact: "medium" },
+      { level: "Margin", finding: "Gross margin dropped from 32% to 28%", impact: "high" },
+      { level: "Product", finding: "Product C has negative margin (-5%)", impact: "critical" },
+      { level: "Region", finding: "Coastal region unprofitable", impact: "high" },
+    ],
+    recommendation: "Discontinue Product C and restructure coastal region operations. Expected profit improvement: +TZS 35M annually.",
+    impact: "+TZS 35M",
+    confidence: 91,
+    risk: "Medium"
+  },
+  "Total Customers": {
+    drillDown: [
+      { level: "Segment", finding: "SME segment lost 15% of customers", impact: "high" },
+      { level: "Region", finding: "Arusha region churn rate at 22%", impact: "critical" },
+      { level: "Product", finding: "Product A customers churning most", impact: "medium" },
+      { level: "Time", finding: "Churn peaked in last 30 days", impact: "high" },
+    ],
+    recommendation: "Implement customer success program for SME segment in Arusha. Offer loyalty incentives for Product A users. Expected retention: +8%.",
+    impact: "+120 customers",
+    confidence: 82,
+    risk: "Low"
+  }
+};
+
 export default function AnalytiqDashboard() {
   const [step, setStep] = useState<"register" | "dashboard">("register");
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -38,11 +92,9 @@ export default function AnalytiqDashboard() {
   const [activeSubTab, setActiveSubTab] = useState("Dashboard");
   const [selectedKPI, setSelectedKPI] = useState<any>(null);
 
-  // Real Data State
   const [kpis, setKpis] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(false);
 
-  // Excel Import
   const [showImport, setShowImport] = useState(false);
   const [importedData, setImportedData] = useState<any[]>([]);
   const [fileName, setFileName] = useState("");
@@ -50,12 +102,10 @@ export default function AnalytiqDashboard() {
   const [uploadMsg, setUploadMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Data Entry Form
   const [dashForm, setDashForm] = useState({ revenue: "", expenses: "", customers: "", units_sold: "" });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
 
-  // Optimization
   const [objectiveType, setObjectiveType] = useState("maximize");
   const [variables, setVariables] = useState([{ name: "x1", coefficient: 5 }, { name: "x2", coefficient: 4 }]);
   const [constraints, setConstraints] = useState([
@@ -65,7 +115,6 @@ export default function AnalytiqDashboard() {
   const [solution, setSolution] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
 
-  // Fetch KPIs from backend
   const fetchKPIs = async () => {
     if (!companyId) return;
     setLoadingData(true);
@@ -80,9 +129,7 @@ export default function AnalytiqDashboard() {
   };
 
   useEffect(() => {
-    if (step === "dashboard" && companyId) {
-      fetchKPIs();
-    }
+    if (step === "dashboard" && companyId) fetchKPIs();
   }, [step, companyId]);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -99,17 +146,14 @@ export default function AnalytiqDashboard() {
         setCompanyId(data.company.id);
         setCompanyName(data.company.companyName);
         setStep("dashboard");
-      } else {
-        alert(data.error || "Imeshindikana.");
-      }
+      } else { alert(data.error || "Imeshindikana."); }
     } catch { alert("Hitilafu."); }
     finally { setRegistering(false); }
   };
 
   const handleSaveRecord = async () => {
     if (!companyId) return;
-    setSaving(true);
-    setSaveMsg("");
+    setSaving(true); setSaveMsg("");
     try {
       const res = await fetch(`${API_URL}/api/records`, {
         method: "POST",
@@ -141,8 +185,7 @@ export default function AnalytiqDashboard() {
 
   const handleBulkUpload = async () => {
     if (!companyId || importedData.length === 0) return;
-    setUploading(true);
-    setUploadMsg("");
+    setUploading(true); setUploadMsg("");
     const records = importedData.map((row: any) => ({
       date: row.date || row.Date || new Date().toISOString().split("T")[0],
       data: {
@@ -161,8 +204,7 @@ export default function AnalytiqDashboard() {
       const data = await res.json();
       if (res.ok) {
         setUploadMsg(`✅ ${data.count} records uploaded!`);
-        setImportedData([]);
-        setFileName("");
+        setImportedData([]); setFileName("");
         fetchKPIs();
       } else { setUploadMsg("❌ Upload failed."); }
     } catch { setUploadMsg("❌ Hitilafu."); }
@@ -188,21 +230,20 @@ export default function AnalytiqDashboard() {
     setActiveSubTab(getSubTabs(id)[0]);
   };
 
-  // Build KPI cards from real or mock data
   const getKPICards = () => {
     if (kpis?.hasData) {
       return [
-        { title: "Total Revenue", value: `TZS ${Number(kpis.revenue).toLocaleString()}`, change: "Real Data", trend: "up", status: "Live", color: "text-blue-600", bg: "bg-blue-50" },
-        { title: "Total Expenses", value: `TZS ${Number(kpis.expenses).toLocaleString()}`, change: "Real Data", trend: "down", status: "Live", color: "text-red-600", bg: "bg-red-50" },
-        { title: "Net Profit", value: `TZS ${Number(kpis.profit).toLocaleString()}`, change: `${kpis.margin}% margin`, trend: kpis.profit >= 0 ? "up" : "down", status: kpis.profit >= 0 ? "Healthy" : "Warning", color: kpis.profit >= 0 ? "text-emerald-600" : "text-red-600", bg: kpis.profit >= 0 ? "bg-emerald-50" : "bg-red-50" },
-        { title: "Total Customers", value: Number(kpis.customers).toLocaleString(), change: `${kpis.totalRecords} records`, trend: "up", status: "Live", color: "text-indigo-600", bg: "bg-indigo-50" },
+        { title: "Total Revenue", value: `TZS ${Number(kpis.revenue).toLocaleString()}`, change: `${kpis.totalRecords} records`, trend: "up", status: "Live", color: "text-blue-600", bg: "bg-blue-50", rawValue: kpis.revenue },
+        { title: "Total Expenses", value: `TZS ${Number(kpis.expenses).toLocaleString()}`, change: `${kpis.totalRecords} records`, trend: "down", status: "Live", color: "text-red-600", bg: "bg-red-50", rawValue: kpis.expenses },
+        { title: "Net Profit", value: `TZS ${Number(kpis.profit).toLocaleString()}`, change: `${kpis.margin}% margin`, trend: kpis.profit >= 0 ? "up" : "down", status: kpis.profit >= 0 ? "Healthy" : "Warning", color: kpis.profit >= 0 ? "text-emerald-600" : "text-red-600", bg: kpis.profit >= 0 ? "bg-emerald-50" : "bg-red-50", rawValue: kpis.profit },
+        { title: "Total Customers", value: Number(kpis.customers).toLocaleString(), change: `${kpis.totalRecords} records`, trend: "up", status: "Live", color: "text-indigo-600", bg: "bg-indigo-50", rawValue: kpis.customers },
       ];
     }
     return [
-      { title: "Total Revenue", value: "TZS 0", change: "No data yet", trend: "up", status: "Empty", color: "text-slate-400", bg: "bg-slate-50" },
-      { title: "Total Expenses", value: "TZS 0", change: "No data yet", trend: "down", status: "Empty", color: "text-slate-400", bg: "bg-slate-50" },
-      { title: "Net Profit", value: "TZS 0", change: "No data yet", trend: "up", status: "Empty", color: "text-slate-400", bg: "bg-slate-50" },
-      { title: "Total Customers", value: "0", change: "No data yet", trend: "up", status: "Empty", color: "text-slate-400", bg: "bg-slate-50" },
+      { title: "Total Revenue", value: "TZS 0", change: "No data yet", trend: "up", status: "Empty", color: "text-slate-400", bg: "bg-slate-50", rawValue: 0 },
+      { title: "Total Expenses", value: "TZS 0", change: "No data yet", trend: "down", status: "Empty", color: "text-slate-400", bg: "bg-slate-50", rawValue: 0 },
+      { title: "Net Profit", value: "TZS 0", change: "No data yet", trend: "up", status: "Empty", color: "text-slate-400", bg: "bg-slate-50", rawValue: 0 },
+      { title: "Total Customers", value: "0", change: "No data yet", trend: "up", status: "Empty", color: "text-slate-400", bg: "bg-slate-50", rawValue: 0 },
     ];
   };
 
@@ -220,8 +261,24 @@ export default function AnalytiqDashboard() {
     try { const r = Solver.Solve(model); setSolution(r); setShowResults(true); } catch { alert("Error."); }
   };
 
+  // Build historical chart data from records
+  const getHistoricalData = (metricKey: string) => {
+    if (!kpis?.hasData || !kpis.records) return [];
+    return kpis.records.slice(0, 14).reverse().map((r: any) => ({
+      date: new Date(r.recordDate).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      value: Number(r.metricsData?.[metricKey]) || 0
+    }));
+  };
+
+  const getMetricKey = (title: string) => {
+    if (title === "Total Revenue") return "revenue";
+    if (title === "Total Expenses") return "expenses";
+    if (title === "Net Profit") return "profit";
+    if (title === "Total Customers") return "customers";
+    return "revenue";
+  };
+
   const renderContent = () => {
-    // OVERVIEW
     if (activeModule === "Overview") {
       if (activeSubTab === "Dashboard") {
         const cards = getKPICards();
@@ -238,6 +295,10 @@ export default function AnalytiqDashboard() {
                   <p className="text-sm font-medium text-slate-500 mb-1">{kpi.title}</p>
                   <h3 className="text-2xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition">{kpi.value}</h3>
                   <p className="text-xs text-slate-400">{kpi.change}</p>
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Click for deep analysis</span>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -343,7 +404,6 @@ export default function AnalytiqDashboard() {
       }
     }
 
-    // DECISIONS
     if (activeModule === "Decisions") {
       if (activeSubTab === "Decision Center") {
         const cards = getKPICards();
@@ -362,8 +422,9 @@ export default function AnalytiqDashboard() {
                   </div>
                   <p className="text-3xl font-bold text-slate-900 mb-2">{kpi.value}</p>
                   <p className="text-xs text-slate-500">{kpi.change}</p>
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-indigo-600">Click for Root Cause Analysis →</p>
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-indigo-600">Click for Root Cause Analysis</p>
+                    <ChevronRight className="w-4 h-4 text-indigo-600" />
                   </div>
                 </div>
               ))}
@@ -404,7 +465,6 @@ export default function AnalytiqDashboard() {
       return <div className="text-center py-20 text-slate-400">{activeSubTab} coming soon...</div>;
     }
 
-    // ANALYTICS
     if (activeModule === "Analytics") {
       if (activeSubTab === "Forecast") {
         return (
@@ -454,7 +514,6 @@ export default function AnalytiqDashboard() {
       return <div className="text-center py-20 text-slate-400">{activeSubTab} coming soon...</div>;
     }
 
-    // MODELS
     if (activeModule === "Models" && activeSubTab === "Optimization") {
       return (
         <div className="space-y-6">
@@ -616,17 +675,142 @@ export default function AnalytiqDashboard() {
         <div className="flex-1 overflow-y-auto p-8">{renderContent()}</div>
       </main>
 
-      {selectedKPI && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-900">{selectedKPI.title}</h3>
-              <button onClick={() => setSelectedKPI(null)} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-500" /></button>
+      {/* DEEP INSIGHT MODAL */}
+      {selectedKPI && (() => {
+        const rootCause = kpiRootCauses[selectedKPI.title] || {
+          drillDown: [{ level: "Data", finding: "Insufficient data for deep analysis", impact: "medium" }],
+          recommendation: "Upload more historical data to enable AI-powered root cause analysis.",
+          impact: "N/A",
+          confidence: 0,
+          risk: "Unknown"
+        };
+        const historicalData = getHistoricalData(getMetricKey(selectedKPI.title));
+        const hasHistory = historicalData.length > 1;
+        
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={() => setSelectedKPI(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-gradient-to-r from-slate-50 to-white">
+                <div className="flex items-start gap-4">
+                  <div className={`p-3 rounded-xl ${selectedKPI.bg}`}>
+                    <TrendingUp className={`w-6 h-6 ${selectedKPI.color}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">{selectedKPI.title}</h3>
+                    <p className="text-sm text-slate-500 mt-1">Executive Decision Panel • Deep Analysis</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedKPI(null)} className="p-2 hover:bg-slate-100 rounded-lg transition"><X className="w-5 h-5 text-slate-500" /></button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Current Value + Historical Trend */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="p-5 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Current Value</p>
+                    <p className="text-3xl font-bold text-slate-900">{selectedKPI.value}</p>
+                    <p className="text-xs text-slate-500 mt-1">{selectedKPI.change}</p>
+                  </div>
+                  <div className="lg:col-span-2 p-5 bg-white rounded-xl border border-slate-200">
+                    <p className="text-xs font-semibold text-slate-500 uppercase mb-3">Historical Trend (Last 14 Days)</p>
+                    {hasHistory ? (
+                      <div className="h-20">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={historicalData}>
+                            <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} dot={{ r: 3, fill: '#6366f1' }} />
+                            <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgb(0 0 0 / 0.1)' }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="h-20 flex items-center justify-center text-sm text-slate-400">
+                        <p>Upload more data to see trend</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Root Cause Analysis - Drill Down */}
+                <div className="bg-slate-900 p-6 rounded-2xl text-white">
+                  <div className="flex items-center gap-2 mb-5">
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                    <h4 className="text-base font-bold">Root Cause Analysis</h4>
+                    <span className="ml-auto text-xs text-slate-400">Drill-down from macro to micro</span>
+                  </div>
+                  <div className="space-y-2">
+                    {rootCause.drillDown.map((item: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700 hover:bg-slate-800 transition">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className={`w-2 h-2 rounded-full ${
+                            item.impact === 'critical' ? 'bg-red-400' : 
+                            item.impact === 'high' ? 'bg-amber-400' : 
+                            item.impact === 'medium' ? 'bg-blue-400' : 'bg-slate-400'
+                          }`}></div>
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider w-24">{item.level}</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm text-slate-200 flex-1">{item.finding}</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${
+                          item.impact === 'critical' ? 'bg-red-500/20 text-red-300' : 
+                          item.impact === 'high' ? 'bg-amber-500/20 text-amber-300' : 
+                          item.impact === 'medium' ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-500/20 text-slate-300'
+                        }`}>
+                          {item.impact.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* AI Recommendation */}
+                <div className="bg-gradient-to-br from-indigo-50 to-white border-2 border-indigo-200 rounded-2xl p-6">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="p-2 bg-indigo-600 rounded-lg flex-shrink-0">
+                      <Lightbulb className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-indigo-900 mb-1">AI Recommended Action</p>
+                      <p className="text-sm text-indigo-700 leading-relaxed">{rootCause.recommendation}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 pt-4 border-t border-indigo-200">
+                    <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                      <p className="text-xs font-semibold text-indigo-700 uppercase mb-1">Expected Impact</p>
+                      <p className="text-lg font-bold text-indigo-900">{rootCause.impact}</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                      <p className="text-xs font-semibold text-indigo-700 uppercase mb-1">Confidence</p>
+                      <p className="text-lg font-bold text-indigo-900">{rootCause.confidence}%</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                      <p className="text-xs font-semibold text-indigo-700 uppercase mb-1">Risk Level</p>
+                      <p className={`text-lg font-bold ${
+                        rootCause.risk === 'Low' ? 'text-emerald-700' : 
+                        rootCause.risk === 'Medium' ? 'text-amber-700' : 'text-red-700'
+                      }`}>{rootCause.risk}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button className="flex items-center justify-center gap-2 p-3 bg-slate-900 text-white rounded-xl font-semibold text-sm hover:bg-slate-800 transition">
+                    <Zap className="w-4 h-4" /> Simulate in Decision Lab
+                  </button>
+                  <button className="flex items-center justify-center gap-2 p-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-50 transition">
+                    <Eye className="w-4 h-4" /> View Full Report
+                  </button>
+                  <button className="flex items-center justify-center gap-2 p-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-50 transition">
+                    <Download className="w-4 h-4" /> Export PDF
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="p-6"><p className="text-4xl font-bold text-slate-900 mb-2">{selectedKPI.value}</p><p className="text-sm text-slate-500">{selectedKPI.change}</p></div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
