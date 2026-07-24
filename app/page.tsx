@@ -10,7 +10,7 @@ import {
   Truck, Calendar, RotateCcw, Play, Upload, UploadCloud, AlertTriangle, Zap, 
   Eye, Download, Send, MapPin, Clock, Database, Sparkles
 } from "lucide-react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
 const API_URL = "https://analytiq-backend-production.up.railway.app";
 
@@ -66,7 +66,6 @@ const kpiRootCauses: Record<string, any> = {
   }
 };
 
-// CSV Sample content
 const CSV_SAMPLE = `date,revenue,expenses,customers,units_sold,eggs_collected,feed_kg,mortality,milk_liters,fish_kg,pigs_sold
 2026-01-15,2850000,1850000,65,420,1250,580,2,180,55,2
 2026-01-16,2920000,1890000,72,445,1320,610,1,195,62,1
@@ -87,7 +86,6 @@ export default function AnalytiqDashboard() {
 
   const [kpis, setKpis] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(false);
-  const [seeding, setSeeding] = useState(false);
 
   const [importedData, setImportedData] = useState<any[]>([]);
   const [fileName, setFileName] = useState("");
@@ -108,7 +106,6 @@ export default function AnalytiqDashboard() {
   const [solution, setSolution] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
 
-  // AI Chat
   const [chatMessages, setChatMessages] = useState<any[]>([
     { role: "ai", text: "Habari Zacharia! Mimi ni ANALYTIQ AI. Nimechambua data ya Bugota Farms ya miezi 6 iliyopita. Unaweza kuniuliza maswali kama:\n\n• 'Kwanini faida ilipungua mwezi uliopita?'\n• 'Ni bidhaa gani inaleta hasara?'\n• 'Nipe utabiri wa mauzo ya mwezi ujao'\n• 'Ni wapi ninapaswa kupunguza gharama?'" }
   ]);
@@ -140,24 +137,6 @@ export default function AnalytiqDashboard() {
       else alert(data.error || "Imeshindikana.");
     } catch { alert("Hitilafu."); }
     finally { setRegistering(false); }
-  };
-
-  const handleSeedDemo = async () => {
-    if (!companyId) return;
-    if (!confirm("Hii itabadilisha data yako yote na data za mazoezi za Bugota Integrated Farms (siku 180). Unaendelea?")) return;
-    setSeeding(true);
-    try {
-      const res = await fetch(`${API_URL}/api/seed-demo`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`✅ ${data.count} days of demo data loaded!\n\nSasa nenda Overview → Dashboard kuona data halisi.`);
-        fetchKPIs();
-      } else alert("Error: " + data.error);
-    } catch { alert("Hitilafu."); }
-    finally { setSeeding(false); }
   };
 
   const handleSaveRecord = async () => {
@@ -211,7 +190,7 @@ export default function AnalytiqDashboard() {
         body: JSON.stringify({ companyId, records }),
       });
       const data = await res.json();
-      if (res.ok) { setUploadMsg(`✅ ${data.count} records uploaded!`); setImportedData([]); setFileName(""); fetchKPIs(); }
+      if (res.ok) { setUploadMsg(`✅ ${data.count} records zimeongezwa!`); setImportedData([]); setFileName(""); fetchKPIs(); }
       else setUploadMsg("❌ Upload failed.");
     } catch { setUploadMsg("❌ Hitilafu."); }
     finally { setUploading(false); }
@@ -320,28 +299,11 @@ export default function AnalytiqDashboard() {
             
             {!kpis?.hasData && (
               <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-8 rounded-2xl shadow-lg">
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-3 bg-white/10 rounded-xl"><Database className="w-6 h-6" /></div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2">Karibu kwenye ANALYTIQ!</h3>
-                    <p className="text-indigo-100 mb-4">Platform yako iko tayari. Chagua njia moja ya kuanza:</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <button onClick={handleSeedDemo} disabled={seeding} className="p-4 bg-white/10 hover:bg-white/20 rounded-xl text-left transition disabled:opacity-50">
-                        <Sparkles className="w-5 h-5 mb-2" />
-                        <p className="font-bold">Load Demo Data</p>
-                        <p className="text-xs text-indigo-200">6 months za Bugota Farms</p>
-                      </button>
-                      <button onClick={() => handleModuleClick("Overview") || setActiveSubTab("Data Entry")} className="p-4 bg-white/10 hover:bg-white/20 rounded-xl text-left transition">
-                        <FileText className="w-5 h-5 mb-2" />
-                        <p className="font-bold">Manual Entry</p>
-                        <p className="text-xs text-indigo-200">Ingiza data ya leo</p>
-                      </button>
-                      <button onClick={() => setActiveSubTab("Import Data")} className="p-4 bg-white/10 hover:bg-white/20 rounded-xl text-left transition">
-                        <UploadCloud className="w-5 h-5 mb-2" />
-                        <p className="font-bold">Upload Excel</p>
-                        <p className="text-xs text-indigo-200">Import from spreadsheet</p>
-                      </button>
-                    </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-1">Karibu kwenye ANALYTIQ!</h3>
+                    <p className="text-indigo-100">Data za miezi 6 zimejazwa tayari. Anza kuongeza data ya leo kupitia Data Entry au Import Excel.</p>
                   </div>
                 </div>
               </div>
